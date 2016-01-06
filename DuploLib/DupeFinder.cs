@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -33,6 +34,9 @@ namespace Duplo
 
         public void ExamineFiles()
         {
+            var stopwatch = new Stopwatch();
+            stopwatch.Start();
+
             foreach (var target in _targetDirs)
             {
                 if (Directory.Exists(target))
@@ -77,6 +81,48 @@ namespace Duplo
                     _logger.Warn("Target directory '{0}' does not exist or is not a directory", target);
                 }
             }
+
+            _logger.Info("Finished examination in {0}", stopwatch.Elapsed);
+            _logger.Info("Examined {0} files, found {1} possible name dupes and {2} possible size dupes", _allFiles.Count, DuplicateNames().Count(), DuplicateSizes().Count());
+            _logger.Info("Now checking hashes of possible dupes...");
+
+            foreach (var entry in _filesBySize.Where(item => item.Value.Count > 1))
+            {
+                foreach (var filenode in entry.Value)
+                {
+                    if (_filesByHash.ContainsKey(filenode.Hash))
+                    {
+                        // Only add one copy of each file, we may come across it in both name and size lists.
+                        if (!_filesByHash[filenode.Hash].Contains(filenode))
+                        {
+                            _filesByHash[filenode.Hash].Add(filenode);
+                        }
+                    }
+                    else
+                    {
+                        _filesByHash[filenode.Hash] = new List<FileNode> { filenode };
+                    }
+                }
+            }
+
+            foreach (var entry in _filesByName.Where(item => item.Value.Count > 1))
+            {
+                foreach (var filenode in entry.Value)
+                {
+                    if (_filesByHash.ContainsKey(filenode.Hash))
+                    {
+                        // Only add one copy of each file, we may come across it in both name and size lists.
+                        if (!_filesByHash[filenode.Hash].Contains(filenode))
+                        {
+                            _filesByHash[filenode.Hash].Add(filenode);
+                        }
+                    }
+                    else
+                    {
+                        _filesByHash[filenode.Hash] = new List<FileNode> { filenode };
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -98,12 +144,17 @@ namespace Duplo
 
         public IEnumerable<KeyValuePair<string, List<FileNode>>> DuplicateNames()
         {
-            return _filesByName.Where(entry => entry.Value.Count > 1);
+            return _filesByName.Where(item => item.Value.Count > 1);
         }
 
         public IEnumerable<KeyValuePair<long, List<FileNode>>> DuplicateSizes()
         {
-            return _filesBySize.Where(entry => entry.Value.Count > 1);
+            return _filesBySize.Where(item => item.Value.Count > 1);
+        }
+
+        public IEnumerable<KeyValuePair<string, List<FileNode>>> DuplicateHashes()
+        {
+            return _filesByHash.Where(item => item.Value.Count > 1);
         }
     }
 }

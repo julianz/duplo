@@ -38,22 +38,22 @@ namespace Duplo.Cli
             var finder = new DupeFinder(targets);
             finder.ExamineFiles();
 
+            _logger.Info("Starting to generate output file");
+
+            // Write out the hash dupes.
+
             JsonSerializer serializer = new JsonSerializer();
             serializer.Converters.Add(new JavaScriptDateTimeConverter());
             serializer.Formatting = Formatting.Indented;
             serializer.NullValueHandling = NullValueHandling.Ignore;
 
-            using (StreamWriter sw = new StreamWriter("duplicate-names.json"))
+            using (StreamWriter sw = new StreamWriter("duplicate-hashes.json"))
             using (JsonWriter writer = new JsonTextWriter(sw))
             {
-                serializer.Serialize(writer, finder.DuplicateNames());
+                serializer.Serialize(writer, finder.DuplicateHashes());
             }
 
-            using (StreamWriter sw = new StreamWriter("duplicate-sizes.json"))
-            using (JsonWriter writer = new JsonTextWriter(sw))
-            {
-                serializer.Serialize(writer, finder.DuplicateSizes());
-            }
+            _logger.Info("Found {0} duplicated files", finder.DuplicateHashes().Count());
 
             return (int)ExitCode.Success;
         }
