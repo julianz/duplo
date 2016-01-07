@@ -44,6 +44,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DirectoryNode.cs" />
     <Compile Include="DupeFinder.cs" />
     <Compile Include="FileNode.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

@@ -17,16 +17,21 @@ namespace Duplo
         private List<String> _targetDirs;
 
         private List<FileNode> _allFiles;
+        private Dictionary<String, DirectoryNode> _allDirs;
 
         private Dictionary<long, List<FileNode>> _filesBySize;
         private Dictionary<String, List<FileNode>> _filesByName;
         private Dictionary<String, List<FileNode>> _filesByHash;
+
+        public Dictionary<String, DirectoryNode> AllDirectories { get { return _allDirs; } }
 
         public DupeFinder(List<String> targetDirs)
         {
             _targetDirs = targetDirs;
 
             _allFiles = new List<FileNode>();
+            _allDirs = new Dictionary<string, DirectoryNode>();
+
             _filesBySize = new Dictionary<long, List<FileNode>>();
             _filesByName = new Dictionary<string, List<FileNode>>();
             _filesByHash = new Dictionary<string, List<FileNode>>();
@@ -51,6 +56,13 @@ namespace Duplo
 
                             var filenode = new FileNode(file);
                             _allFiles.Add(filenode);
+
+                            if (!_allDirs.ContainsKey(file.DirectoryName))
+                            {
+                                _logger.Debug("Adding directory '{0}'", file.DirectoryName);
+                                _allDirs[file.DirectoryName] = new DirectoryNode(file.Directory);
+                            }
+                            _allDirs[file.DirectoryName].FileCount++;
 
                             // Filename
                             if (_filesByName.ContainsKey(filenode.File.Name))
@@ -86,42 +98,14 @@ namespace Duplo
             _logger.Info("Examined {0} files, found {1} possible name dupes and {2} possible size dupes", _allFiles.Count, DuplicateNames().Count(), DuplicateSizes().Count());
             _logger.Info("Now checking hashes of possible dupes...");
 
-            foreach (var entry in _filesBySize.Where(item => item.Value.Count > 1))
-            {
-                foreach (var filenode in entry.Value)
-                {
-                    if (_filesByHash.ContainsKey(filenode.Hash))
-                    {
-                        // Only add one copy of each file, we may come across it in both name and size lists.
-                        if (!_filesByHash[filenode.Hash].Contains(filenode))
-                        {
-                            _filesByHash[filenode.Hash].Add(filenode);
-                        }
-                    }
-                    else
-                    {
-                        _filesByHash[filenode.Hash] = new List<FileNode> { filenode };
-                    }
-                }
-            }
-
             foreach (var entry in _filesByName.Where(item => item.Value.Count > 1))
             {
-                foreach (var filenode in entry.Value)
-                {
-                    if (_filesByHash.ContainsKey(filenode.Hash))
-                    {
-                        // Only add one copy of each file, we may come across it in both name and size lists.
-                        if (!_filesByHash[filenode.Hash].Contains(filenode))
-                        {
-                            _filesByHash[filenode.Hash].Add(filenode);
-                        }
-                    }
-                    else
-                    {
-                        _filesByHash[filenode.Hash] = new List<FileNode> { filenode };
-                    }
-                }
+                FindDuplicateHashes(entry.Value);
+            }
+
+            foreach (var entry in _filesBySize.Where(item => item.Value.Count > 1))
+            {
+                FindDuplicateHashes(entry.Value);
             }
         }
 
@@ -140,6 +124,29 @@ namespace Duplo
             if (file.Extension.Equals(".ini", StringComparison.InvariantCultureIgnoreCase)) { return false; }
 
             return true;
+        }
+
+        /// <summary>
+        /// Compute hashes for a list of file nodes and add them to _filesByHash.
+        /// </summary>
+        private void FindDuplicateHashes(List<FileNode> filenodes)
+        {
+            foreach (var filenode in filenodes)
+            {
+                if (_filesByHash.ContainsKey(filenode.Hash))
+                {
+                    // Only add one copy of each file, we may come across it in both name and size lists.
+                    if (!_filesByHash[filenode.Hash].Contains(filenode))
+                    {
+                        _filesByHash[filenode.Hash].Add(filenode);
+                        _allDirs[filenode.File.DirectoryName].DuplicateCount++;
+                    }
+                }
+                else
+                {
+                    _filesByHash[filenode.Hash] = new List<FileNode> { filenode };
+                }
+            }
         }
 
         public IEnumerable<KeyValuePair<string, List<FileNode>>> DuplicateNames()

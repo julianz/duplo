@@ -55,12 +55,15 @@ namespace Duplo.Cli
 
             _logger.Info("Found {0} duplicated files", finder.DuplicateHashes().Count());
 
+            Console.WriteLine(JsonConvert.SerializeObject(finder.AllDirectories, Formatting.Indented));
+
             return (int)ExitCode.Success;
         }
 
         static void Usage()
         {
-            Console.WriteLine("Duplo.exe <dir1> <dir2> ...");
+            Console.WriteLine("Duplo - finds duplicate images in your collection\r\n");
+            Console.WriteLine("Usage: Duplo.exe <dir1> [<dir2> ...]");
         }
     }
 }
