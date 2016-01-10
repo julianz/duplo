@@ -107,6 +107,23 @@ namespace Duplo
             {
                 FindDuplicateHashes(entry.Value);
             }
+
+            CountDuplicatesByDirectory();
+        }
+
+        /// <summary>
+        /// Go through all hashes that have more than one file attached, and mark
+        /// the directories containing those files as having dupes.
+        /// </summary>
+        private void CountDuplicatesByDirectory()
+        {
+            foreach (var entry in DuplicateHashes())
+            {
+                foreach (var filenode in entry.Value)
+                {
+                    _allDirs[filenode.File.DirectoryName].DuplicateCount++;
+                }
+            }
         }
 
         /// <summary>
@@ -139,7 +156,6 @@ namespace Duplo
                     if (!_filesByHash[filenode.Hash].Contains(filenode))
                     {
                         _filesByHash[filenode.Hash].Add(filenode);
-                        _allDirs[filenode.File.DirectoryName].DuplicateCount++;
                     }
                 }
                 else

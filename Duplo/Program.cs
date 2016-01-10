@@ -53,9 +53,28 @@ namespace Duplo.Cli
                 serializer.Serialize(writer, finder.DuplicateHashes());
             }
 
+            using (StreamWriter sw = new StreamWriter("all-directories.json"))
+            using (JsonWriter writer = new JsonTextWriter(sw))
+            {
+                serializer.Serialize(writer, finder.AllDirectories);
+            }
+
             _logger.Info("Found {0} duplicated files", finder.DuplicateHashes().Count());
 
-            Console.WriteLine(JsonConvert.SerializeObject(finder.AllDirectories, Formatting.Indented));
+            // Find all directories that are mostly dupes or have a very large number of dupes.
+            foreach (var entry in finder.AllDirectories)
+            {
+                if ((float)(entry.Value.DuplicateCount) / entry.Value.FileCount >= 0.8f)
+                {
+                    Console.WriteLine("{0} has {1}% dupes", entry.Key, ((float)(entry.Value.DuplicateCount) / entry.Value.FileCount) * 100);
+                }
+                else if (entry.Value.DuplicateCount >= 100)
+                {
+                    Console.WriteLine("{0} has {1} dupes", entry.Key, entry.Value.DuplicateCount);
+                }
+            }
+
+            Console.ReadLine();
 
             return (int)ExitCode.Success;
         }
